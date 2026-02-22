@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Tracker - Goals</title>
+    <link rel="stylesheet" href="index-style.css">
+</head>
+<body>
+
+<nav>
+    <div class="logo">🏥 Health Tracker</div>
+    <ul>
+        <li><a href="index.html">Food Log</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="goals.html" class="active">Goals</a></li>
+        <li><a href="upload.html">Analyze Image</a></li>
+    </ul>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+    <h1>🎯 Set Your Health Goals</h1>
+
+    <div class="form-section">
+        <h2>📊 Daily Nutrition & Weight Goals</h2>
+        <div id="successMessage"></div>
+        <div id="errorMessage"></div>
+
+        <div class="form-group">
+            <label for="daily_calories">Daily Calories Target (kcal) *</label>
+            <input type="number" id="daily_calories" placeholder="e.g., 2000" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label>Macronutrient Targets (Optional)</label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <input type="number" id="protein_target" placeholder="Protein (g)" min="0" step="0.1">
+            <input type="number" id="carbs_target" placeholder="Carbs (g)" min="0" step="0.1">
+            <input type="number" id="fat_target" placeholder="Fat (g)" min="0" step="0.1">
+        </div>
+
+        <div class="form-group">
+            <label for="weight_goal">Target Weight (kg) *</label>
+            <input type="number" id="weight_goal" placeholder="e.g., 75" min="0" step="0.1" required>
+        </div>
+
+        <button onclick="saveGoal()">💾 Save Goal</button>
+    </div>
+
+    <div class="form-section">
+        <h2>📋 Current Goal</h2>
+        <div id="currentGoal"></div>
+    </div>
+
+    <button onclick="history.back()" class="secondary">⬅ Go Back</button>
+</div>
+
+<script>
+const API_BASE = "../api/";
+
+function checkAuth(){
+    fetch(API_BASE + "goals.php", { credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+            if(data.error) window.location.href = "login.html";
+        });
+}
+
+function saveGoal() {
+    const goalData = {
+        daily_calories: parseInt(document.getElementById("daily_calories").value) || 0,
+        protein_target: parseInt(document.getElementById("protein_target").value) || 0,
+        carbs_target: parseInt(document.getElementById("carbs_target").value) || 0,
+        fat_target: parseInt(document.getElementById("fat_target").value) || 0,
+        weight_goal: parseFloat(document.getElementById("weight_goal").value) || 0
+    };
+
+    fetch(API_BASE + "goals.php", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(goalData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            showMessage("✅ Goal saved successfully!", "success");
+            loadGoal();
+        } else {
+            showMessage("❌ Failed to save goal", "error");
+        }
+    })
+    .catch(() => showMessage("Server error", "error"));
+}
+
+function loadGoal() {
+    fetch(API_BASE + "goals.php", { credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.error) {
+                document.getElementById("currentGoal").innerHTML = "<p>No goal set yet.</p>";
+                return;
+            }
+
+            document.getElementById("daily_calories").value = data.daily_calories ?? '';
+            document.getElementById("protein_target").value = data.protein_target ?? '';
+            document.getElementById("carbs_target").value = data.carbs_target ?? '';
+            document.getElementById("fat_target").value = data.fat_target ?? '';
+            document.getElementById("weight_goal").value = data.weight_goal ?? '';
+
+            document.getElementById("currentGoal").innerHTML = `
+                <div class="entry">
+                    <div class="entry-header">🎯 Your Current Goals</div>
+                    <div class="entry-stats">
+                        <span>🔥 ${data.daily_calories} kcal/day</span>
+                        <span>💪 ${data.protein_target}g Protein</span>
+                        <span>🌾 ${data.carbs_target}g Carbs</span>
+                        <span>🧈 ${data.fat_target}g Fat</span>
+                        <span>⚖️ ${data.weight_goal}kg Goal</span>
+                    </div>
+                </div>
+            `;
+        });
+}
+
+function showMessage(message, type) {
+    const successDiv = document.getElementById("successMessage");
+    const errorDiv = document.getElementById("errorMessage");
+
+    if(type === "success"){
+        successDiv.innerHTML = `<div class="success-message">${message}</div>`;
+        errorDiv.innerHTML = '';
+        setTimeout(() => successDiv.innerHTML = '', 5000);
+    } else {
+        errorDiv.innerHTML = `<div class="error-message">${message}</div>`;
+        successDiv.innerHTML = '';
+        setTimeout(() => errorDiv.innerHTML = '', 5000);
+    }
+}
+
+function logout(){
+    if(confirm("Are you sure you want to logout?")){
+        fetch(API_BASE + "logout.php", { credentials: "include" })
+            .then(() => window.location.href = "login.html");
+    }
+}
+
+window.onload = function(){
+    checkAuth();
+    loadGoal();
+};
+</script>
+
+</body>
+</html>

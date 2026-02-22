@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze Image - Health Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+    <div class="logo">🏥 Health Tracker</div>
+    <ul>
+        <li><a href="index.html">Food Log</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="goals.html">Goals</a></li>
+        <li><a href="upload.html">Analyze Image</a></li>
+    </ul>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+    <h1>🖼️ Analyze Food Image</h1>
+
+    <div id="successMessage"></div>
+    <div id="errorMessage"></div>
+
+    <div class="card">
+        <h3>Upload a photo of your meal</h3>
+        <p>Our AI will analyze the image and estimate the calories and nutritional content of your food.</p>
+    </div>
+
+    <div class="form-group">
+        <label for="image" style="display: block; margin-bottom: 10px; font-weight: bold;">Choose Image:</label>
+        <input type="file" id="image" accept="image/*" placeholder="Select an image">
+    </div>
+
+    <div id="imagePreview"></div>
+
+    <button onclick="uploadImage()">Analyze Image</button>
+    <button onclick="goBack()" class="secondary">← Back to Food Log</button>
+
+    <div id="analysisResult"></div>
+</div>
+
+<script>
+// Preview image before upload
+document.getElementById("image").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if(file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById("imagePreview").innerHTML = 
+                `<img src="${event.target.result}" style="max-width: 100%; max-height: 300px; border-radius: 8px; margin: 20px 0;">`;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+function uploadImage() {
+    const file = document.getElementById("image").files[0];
+    const resultDiv = document.getElementById("analysisResult");
+
+    if (!file) {
+        showMessage("Please select an image first", 'error');
+        return;
+    }
+
+    // Show loading state
+    resultDiv.innerHTML = '<div class="card" style="text-align: center;">⏳ Analyzing image...</div>';
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    fetch("../api/analyze_image.php", {
+        method: "POST",
+        credentials: "include",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success || data.calories) {
+            const calories = data.calories || 0;
+            const analysis = `
+                <div class="card">
+                    <h3>✅ Analysis Results</h3>
+                    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px;">
+                        <p><strong>Estimated Calories:</strong> ${calories} kcal</p>
+                        ${data.protein ? `<p><strong>Protein:</strong> ${data.protein}g</p>` : ''}
+                        ${data.carbs ? `<p><strong>Carbs:</strong> ${data.carbs}g</p>` : ''}
+                        ${data.fat ? `<p><strong>Fat:</strong> ${data.fat}g</p>` : ''}
+                    </div>
+                </div>
+            `;
+            resultDiv.innerHTML = analysis;
+            showMessage("✅ Image analyzed successfully!", 'success');
+        } else {
+            resultDiv.innerHTML = '';
+            showMessage(data.message || "Could not analyze image", 'error');
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '';
+        showMessage("Error analyzing image. Please try again.", 'error');
+        console.error(error);
+    });
+}
+
+function showMessage(message, type) {
+    const successDiv = document.getElementById("successMessage");
+    const errorDiv = document.getElementById("errorMessage");
+    
+    if (type === 'success') {
+        successDiv.innerHTML = `<div class="success-message">${message}</div>`;
+        errorDiv.innerHTML = '';
+        setTimeout(() => successDiv.innerHTML = '', 5000);
+    } else {
+        errorDiv.innerHTML = `<div class="error-message">${message}</div>`;
+        successDiv.innerHTML = '';
+        setTimeout(() => errorDiv.innerHTML = '', 5000);
+    }
+}
+
+function logout(){
+    if(confirm("Are you sure you want to logout?")){
+        fetch("../api/logout.php")
+        .then(res => res.json())
+        .then(() => {
+            window.location = "login.html";
+        });
+    }
+}
+
+function goBack() {
+    window.location = "index.html";
+}
+</script>
+</body>
+</html>

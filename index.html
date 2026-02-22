@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Tracker - Food Log</title>
+    <link rel="stylesheet" href="index-style.css">
+</head>
+<body>
+
+<nav>
+    <div class="logo">🏥 Health Tracker</div>
+    <ul>
+        <li><a href="index.html">Food Log</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="goals.html">Goals</a></li>
+        <li><a href="upload.html">Analyze Image</a></li>
+    </ul>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+    <h1>📊 Nutrition Tracker</h1>
+
+    <!-- Add Entry Section -->
+    <div class="form-section">
+        <h2>➕ Add New Food Entry</h2>
+        
+        <div id="successMessage"></div>
+        <div id="errorMessage"></div>
+
+        <div class="form-group">
+            <label for="food_name">Food Name *</label>
+            <input type="text" id="food_name" placeholder="e.g., Grilled Chicken Breast" required>
+        </div>
+
+        <div class="form-group">
+            <label for="quantity">Quantity (Optional)</label>
+            <input type="text" id="quantity" placeholder="e.g., 100g, 1 cup, 1 medium">
+        </div>
+
+        <div class="form-group">
+            <label for="meal_type">Meal Type *</label>
+            <select id="meal_type" required>
+                <option value="">Select a meal type</option>
+                <option value="Breakfast">🌅 Breakfast</option>
+                <option value="Lunch">🍽️ Lunch</option>
+                <option value="Dinner">🌙 Dinner</option>
+                <option value="Snack">🍎 Snack</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="entry_date">Date *</label>
+            <input type="date" id="entry_date" required>
+        </div>
+
+        <div class="form-group">
+            <label>Nutritional Information (Optional)</label>
+        </div>
+
+        <div class="nutrition-grid">
+            <input type="number" id="calories" placeholder="Calories (kcal)" min="0">
+            <input type="number" id="protein" placeholder="Protein (g)" min="0" step="0.1">
+            <input type="number" id="carbs" placeholder="Carbs (g)" min="0" step="0.1">
+            <input type="number" id="fat" placeholder="Fat (g)" min="0" step="0.1">
+        </div>
+
+        <button onclick="addFood()">✅ Add Entry</button>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h2>🔍 Filter Your Entries</h2>
+        
+        <div class="filter-row">
+            <div class="form-group">
+                <label for="start_date">Start Date</label>
+                <input type="date" id="start_date">
+            </div>
+            <div class="form-group">
+                <label for="end_date">End Date</label>
+                <input type="date" id="end_date">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="filter_meal">Meal Type</label>
+            <select id="filter_meal">
+                <option value="">📋 All Meals</option>
+                <option value="Breakfast">🌅 Breakfast</option>
+                <option value="Lunch">🍽️ Lunch</option>
+                <option value="Dinner">🌙 Dinner</option>
+                <option value="Snack">🍎 Snack</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button onclick="loadEntries()">🔍 Apply Filter</button>
+            <button class="secondary" onclick="clearFilters()">↺ Reset</button>
+        </div>
+    </div>
+
+    <!-- Entries Display -->
+    <div class="form-section">
+        <h2>📋 Your Recent Entries</h2>
+        <div id="entries"></div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        <button onclick="prevPage()">← Previous</button>
+        <div class="page-info"><span id="pageInfo">Page 1 of 1</span></div>
+        <button onclick="nextPage()">Next →</button>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+function checkAuth() {
+    fetch("../api/food_entries.php?page=1", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            window.location = "login.html";
+        }
+    });
+}
+
+function addFood() {
+    const foodData = {
+        food_name: document.getElementById("food_name").value.trim(),
+        quantity: document.getElementById("quantity").value.trim(),
+        meal_type: document.getElementById("meal_type").value,
+        calories: document.getElementById("calories").value || null,
+        protein: document.getElementById("protein").value || null,
+        carbs: document.getElementById("carbs").value || null,
+        fat: document.getElementById("fat").value || null,
+        entry_date: document.getElementById("entry_date").value
+    };
+
+    // Validation
+    if (!foodData.food_name || !foodData.meal_type || !foodData.entry_date) {
+        showMessage("Please fill in all required fields (*)", 'error');
+        return;
+    }
+
+    fetch("../api/food_entries.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(foodData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.error){
+            showMessage("Please login again.", 'error');
+            window.location = "login.html";
+        } else {
+            showMessage("✅ Entry added successfully!", 'success');
+            // Clear form
+            document.getElementById("food_name").value = '';
+            document.getElementById("quantity").value = '';
+            document.getElementById("meal_type").value = '';
+            document.getElementById("calories").value = '';
+            document.getElementById("protein").value = '';
+            document.getElementById("carbs").value = '';
+            document.getElementById("fat").value = '';
+            document.getElementById("entry_date").value = new Date().toISOString().split('T')[0];
+            loadEntries();
+            // Scroll to entries
+            document.querySelector('.form-section:last-of-type').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    })
+    .catch(error => {
+        showMessage("Error adding entry", 'error');
+        console.error(error);
+    });
+}
+
+function loadEntries(page = 1) {
+    currentPage = page;
+
+    const start = document.getElementById("start_date").value;
+    const end = document.getElementById("end_date").value;
+    const meal = document.getElementById("filter_meal").value;
+
+    let url = `../api/food_entries.php?page=${page}`;
+
+    if(start && end){
+        url += `&start=${start}&end=${end}`;
+    }
+
+    if(meal){
+        url += `&meal=${meal}`;
+    }
+
+    fetch(url, { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+        if(data.error){
+            window.location = "login.html";
+            return;
+        }
+
+        totalPages = data.total_pages || 1;
+        let html = "";
+
+        if(data.data && data.data.length === 0){
+            html = '<div class="empty-state"><p>📭 No entries found. Start tracking your meals!</p></div>';
+        } else if(data.data) {
+            data.data.forEach(item => {
+                html += `
+                    <div class="entry">
+                        <div class="entry-header">${getMealEmoji(item.meal_type)} ${item.meal_type} • ${formatDate(item.entry_date)}</div>
+                        <div class="entry-food">🍽️ ${item.food_name}${item.quantity ? ' (' + item.quantity + ')' : ''}</div>
+                        <div class="entry-stats">
+                            ${item.calories ? `<span>🔥 ${item.calories} kcal</span>` : ''}
+                            ${item.protein ? `<span>💪 ${item.protein}g Protein</span>` : ''}
+                            ${item.carbs ? `<span>🌾 ${item.carbs}g Carbs</span>` : ''}
+                            ${item.fat ? `<span>🧈 ${item.fat}g Fat</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById("entries").innerHTML = html;
+        document.getElementById("pageInfo").innerText = `Page ${currentPage} of ${totalPages}`;
+    })
+    .catch(error => {
+        showMessage("Error loading entries", 'error');
+        console.error(error);
+    });
+}
+
+function clearFilters() {
+    document.getElementById("start_date").value = '';
+    document.getElementById("end_date").value = '';
+    document.getElementById("filter_meal").value = '';
+    loadEntries();
+}
+
+function nextPage(){
+    if(currentPage < totalPages){
+        loadEntries(currentPage + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function prevPage(){
+    if(currentPage > 1){
+        loadEntries(currentPage - 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function logout(){
+    if(confirm("Are you sure you want to logout?")){
+        fetch("../api/logout.php", { credentials: "include" })
+        .then(res => res.json())
+        .then(() => {
+            window.location = "login.html";
+        });
+    }
+}
+
+function showMessage(message, type) {
+    const successDiv = document.getElementById("successMessage");
+    const errorDiv = document.getElementById("errorMessage");
+    
+    if (type === 'success') {
+        successDiv.innerHTML = `<div class="success-message">${message}</div>`;
+        errorDiv.innerHTML = '';
+        setTimeout(() => successDiv.innerHTML = '', 5000);
+    } else {
+        errorDiv.innerHTML = `<div class="error-message">${message}</div>`;
+        successDiv.innerHTML = '';
+        setTimeout(() => errorDiv.innerHTML = '', 5000);
+    }
+}
+
+function getMealEmoji(meal) {
+    const emojis = {
+        'Breakfast': '🌅',
+        'Lunch': '🍽️',
+        'Dinner': '🌙',
+        'Snack': '🍎'
+    };
+    return emojis[meal] || '🍴';
+}
+
+function formatDate(dateString) {
+    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options);
+}
+
+// Set today's date as default
+document.getElementById("entry_date").valueAsDate = new Date();
+
+checkAuth();
+loadEntries();
+
+</script>
+
+</body>
+</html>

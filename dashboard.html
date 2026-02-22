@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Health Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo">🏥 Health Tracker</div>
+    <ul>
+        <li><a href="index.html">Food Log</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="goals.html">Goals</a></li>
+        <li><a href="upload.html">Analyze Image</a></li>
+    </ul>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+    <h1>📊 Weekly Calorie Trend</h1>
+    
+    <div class="card">
+        <canvas id="calorieChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>📈 Chart Information</h3>
+        <p>This chart displays your daily calorie intake over the past week. Track your progress and maintain a healthy lifestyle!</p>
+    </div>
+
+    <button onclick="goBack()" class="secondary">← Back to Food Log</button>
+</div>
+
+<script src="dashboard.js"></script>
+<script>
+function logout(){
+    if(confirm("Are you sure you want to logout?")){
+        fetch("../api/logout.php", { credentials: "include" })
+        .then(res => res.json())
+        .then(() => {
+            window.location = "login.html";
+        });
+    }
+}
+
+function goBack() {
+    window.location = "index.html";
+}
+</script>
+</body>
+</html>

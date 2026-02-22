@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Health Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="auth-container">
+    <h2>Create Your Account</h2>
+
+    <div id="errorMessage"></div>
+
+    <div class="form-group">
+        <input type="text" id="name" placeholder="Full Name" required>
+    </div>
+
+    <div class="form-group">
+        <input type="email" id="email" placeholder="Email Address" required>
+    </div>
+
+    <div class="form-group">
+        <input type="password" id="password" placeholder="Password (min 6 characters)" required>
+    </div>
+
+    <button onclick="register()">Create Account</button>
+
+    <div class="auth-link">
+        <p>Already have an account?</p>
+        <button class="secondary" onclick="window.location='login.html'">Login</button>
+    </div>
+</div>
+
+<script>
+function register() {
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const errorDiv = document.getElementById("errorMessage");
+
+    // Validation
+    if (!name || !email || !password) {
+        showError("Please fill in all fields", errorDiv);
+        return;
+    }
+
+    if (password.length < 6) {
+        showError("Password must be at least 6 characters", errorDiv);
+        return;
+    }
+
+    if (!email.includes("@")) {
+        showError("Please enter a valid email address", errorDiv);
+        return;
+    }
+
+    fetch("../api/register.php", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({
+            name: name,
+            email: email,
+            password: password
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            showError('Account created! Redirecting to login...', errorDiv);
+            setTimeout(() => window.location = "login.html", 2000);
+        } else {
+            showError(data.message || "Registration failed", errorDiv);
+        }
+    })
+    .catch(error => {
+        showError("Server error. Please try again.", errorDiv);
+        console.error(error);
+    });
+}
+
+function showError(message, element) {
+    element.innerHTML = `<div class="error-message">${message}</div>`;
+}
+
+// Allow Enter key to submit
+document.querySelectorAll("input").forEach(input => {
+    input.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") register();
+    });
+});
+</script>
+
+</body>
+</html>
